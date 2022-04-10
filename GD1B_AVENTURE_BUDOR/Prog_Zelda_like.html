@@ -1,0 +1,374 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8" />
+    <title>Zelda Like</title>
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<script type="text/javascript">
+
+class scene0 extends Phaser.Scene{
+    constructor(){
+        super("scene0");
+    }
+
+    preload(){
+        this.load.image('Start screen','Start_ecran.png');
+        this.load.image('Background', 'Background_Zelda_like.png');
+    }
+
+    create(){
+        this.add.image(512,512,'Start screen');
+        
+        this.input.on('pointerup', function (pointer) {
+
+    this.scene.start('scene1');
+
+    }, this);
+    }
+
+};
+
+class scene1 extends Phaser.Scene{
+    constructor(){
+        super("scene1");
+    }
+
+    preload(){
+ 
+        this.load.image('Background', 'Background_Zelda_like.png');
+        this.load.image('star', 'star.png');
+        this.load.spritesheet('Ennemi', 'Monstre.png', { frameWidth: 48, frameHeight: 32 });
+        this.load.spritesheet('Heros', 'All_frame_heros.png', { frameWidth: 32, frameHeight: 48 });
+        this.load.spritesheet('Barredevie', 'Barre_de_vie.png', { frameWidth: 64, frameHeight: 64 });
+        this.load.tilemapTiledJSON("Tiled_set", "Test.json");  
+        this.load.image("tiled", "ALL.png");
+
+    }
+
+    create(){
+        this.score=0;
+        // chargement de la carte
+        const carteDuNiveau = this.add.tilemap("Tiled_set");
+
+        // chargement du jeu de tuiles
+        const tileset = carteDuNiveau.addTilesetImage(
+          "ALL",
+          "tiled"
+        );  
+        
+        // chargement du calque calque_background_2
+        const Background = carteDuNiveau.createLayer(
+          "Background",
+          tileset
+        );
+
+        // chargement du calque calque_plateformes
+        const Wall = carteDuNiveau.createLayer(
+          "Wall",
+          tileset
+        );  
+       
+
+        // définition des tuiles de plateformes qui sont solides
+        // utilisation de la propriété estVisible
+        Wall.setCollisionByProperty({ estVisible: true });
+
+        // The player and its settings
+
+        this.player = this.physics.add.sprite(800, 544, 'Heros');
+        
+
+        //  The platforms group contains the ground and the 2 ledges we can jump on
+        this.platforms = this.physics.add.staticGroup();
+
+        //  Player physics properties. Give the little guy a slight bounce.
+        this.player.setBounce(0.2);
+        this.player.setCollideWorldBounds(true);
+
+        //  Our player animations, turning, walking left and walking right.
+        this.anims.create({
+            key: 'left',
+            frames: this.anims.generateFrameNumbers('Heros', { start: 5, end: 8 }),
+            frameRate: 15,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'turn',
+            frames: [ { key: 'Heros', frame: 0 } ],
+            frameRate: 20
+        });
+
+        this.anims.create({
+            key: 'right',
+            frames: this.anims.generateFrameNumbers('Heros', { start: 13, end: 16 }),
+            frameRate: 15,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'up',
+            frames: this.anims.generateFrameNumbers('Heros', { start: 9, end: 12 }),
+            frameRate: 15,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'down',
+            frames: this.anims.generateFrameNumbers('Heros', { start: 1, end: 4 }),
+            frameRate: 15,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'turn',
+            frames: [ { key: 'Ennemi', frame: 0 } ],
+            frameRate: 20
+        });
+
+
+        //  Input Events
+        this.cursors = this.input.keyboard.createCursorKeys();
+        this.paddle = {A:false,B:false,up:false,down:false};
+        if(this.paddle.A){
+            
+        }
+
+        //  Some stars to collect, 12 in total, evenly spaced 70 pixels apart along the x axis
+        this.stars = this.physics.add.group({
+            key: 'star',
+            repeat: 0,
+            setXY: { x: 990, y: 1670, stepX: 300
+             }
+        });
+
+        this.stars.children.iterate(function (child) {
+
+            //  Give each star a slightly different bounce
+            child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+
+        }); //chaque étoile va rebondir un peu différemment
+
+        this.bombs = this.physics.add.group();
+
+        //  The score
+        this.scoreText = this.add.text(16, 16, 'Points: 0', { fontSize: '32px', fill: '#000' });
+
+        //  Collide the player and the stars with the platforms
+        this.physics.add.collider(this.player, this.platforms);
+        this.physics.add.collider(this.stars, this.platforms);
+
+        // ajout d'une collision entre le joueur et le calque plateformes
+        this.physics.add.collider(this.player, Wall);
+
+
+
+
+        //  Checks to see if the player overlaps with any of the stars, if he does call the collectStar function
+        this.physics.add.overlap(this.player, this.stars, this.collectStar, null, this);
+       
+
+        this.physics.world.setBounds(0 ,0, 3200, 3200);
+        this.cameras.main.setBounds(0, 0,3200, 3200);
+        this.cameras.main.startFollow(this.player);
+        this.cameras.main.setZoom(2);
+
+        this.Barredevie = this.physics.add.sprite(300, 300, 'Barredevie').setScrollFactor(0);
+        this.anims.create({
+            key: 'Barredevie0',
+            frames: [ { key: 'Barredevie', frame: 0 } ],
+            frameRate: 20
+        });
+        this.anims.create({
+            key: 'Barredevie1',
+            frames: [ { key: 'Barredevie', frame: 1 } ],
+            frameRate: 20
+        });
+        this.anims.create({
+            key: 'Barredevie2',
+            frames: [ { key: 'Barredevie', frame: 2 } ],
+            frameRate: 20
+        });
+        this.anims.create({
+            key: 'Barredevie3',
+            frames: [ { key: 'Barredevie', frame: 3 } ],
+            frameRate: 20
+        });
+        
+        this.Ennemi = this.physics.add.group();
+            this.Ennemi.create(512, 512, 'Ennemi')
+            this.Ennemi = this.physics.add.sprite(800, 960, 'Ennemi');
+
+        this.Ennemi = this.physics.add.group();
+            this.Ennemi.create(512, 512, 'Ennemi')
+            this.Ennemi = this.physics.add.sprite(1344, 960, 'Ennemi');
+
+
+        this.Ennemi = this.physics.add.group();
+            this.Ennemi.create(512, 512, 'Ennemi')
+            this.Ennemi = this.physics.add.sprite(2210, 640, 'Ennemi');
+
+        this.Ennemi = this.physics.add.group();
+            this.Ennemi.create(512, 512, 'Ennemi')
+            this.Ennemi = this.physics.add.sprite(2368, 1152, 'Ennemi');
+
+        this.Ennemi = this.physics.add.group();
+            this.Ennemi.create(512, 512, 'Ennemi')
+            this.Ennemi = this.physics.add.sprite(960, 1536, 'Ennemi');
+
+        this.Ennemi = this.physics.add.group();
+            this.Ennemi.create(512, 512, 'Ennemi')
+            this.Ennemi = this.physics.add.sprite(2912, 1184, 'Ennemi');
+
+        this.Ennemi = this.physics.add.group();
+            this.Ennemi.create(512, 512, 'Ennemi')
+            this.Ennemi = this.physics.add.sprite(2464, 1500, 'Ennemi');
+
+        this.Ennemi = this.physics.add.group();
+            this.Ennemi.create(512, 512, 'Ennemi')
+            this.Ennemi = this.physics.add.sprite(1632, 1500, 'Ennemi');
+
+        
+        // this.physics.add.collider(this.JOUEUR, this.Ennemi, this.TUER, null, this);
+
+        
+
+    }
+
+    update(){
+        this.Barredevie.anims.play('Barredevie0');
+        if (this.gameOver){
+            return;
+        }
+        
+        
+        //Déplacement vertical
+        if (this.cursors.up.isDown){
+            this.player.anims.play('up', true); //et animation => gauche
+            if (this.cursors.down.isDown) {
+                this.player.setVelocityY(0);
+            }
+            else {
+                if (this.player.body.velocity.x != 0) {
+                    this.player.setVelocityY(-200);
+                } else {
+                    this.player.setVelocityY(-300);
+                }
+            }
+        }
+        else if (this.cursors.down.isDown){
+            this.player.anims.play('down', true); //et animation => gauche
+            if (this.player.body.velocity.x != 0) {
+                    this.player.setVelocityY(200);
+                } else {
+                    this.player.setVelocityY(300);
+                }
+        }
+        else {this.player.setVelocityY(0);}
+        //Déplacement horizontal
+        if (this.cursors.left.isDown){
+            this.player.anims.play('left', true); //et animation => gauche
+            if (this.cursors.right.isDown) {
+                this.player.setVelocityX(0);
+            }
+            else {
+                if (this.player.body.velocity.y != 0) {
+                    this.player.setVelocityX(-200);
+                } else {
+                    this.player.setVelocityX(-300);
+                }
+            }
+        }
+        else if (this.cursors.right.isDown){
+            this.player.anims.play('right', true); //et animation => gauche
+            if (this.player.body.velocity.y != 0) {
+                    this.player.setVelocityX(200);
+                } else {
+                    this.player.setVelocityX(300);
+                }
+        }
+        else {this.player.setVelocityX(0);
+        }
+        if (this.player.body.velocity.y == 0 & this.player.body.velocity.x == 0){
+            this.player.anims.play('turn');
+        }
+        
+    }
+    
+    collectStar (player, star){
+        this.scene.start('scene2',{score:this.score});
+
+        var Ennemi = this.Ennemi.create(x, 16, 'Ennemi');
+                    Ennemi.setBounce(1);
+                    Ennemi.setCollideWorldBounds(true);
+                    Ennemi.setVelocity(Phaser.Math.Between(-200, 200), 20);
+
+                    this.physics.add.collider(this.player, this.Ennemi, hitEnnemi, null, this);
+
+    //  if(this.Ennemi.x < this.player.x){
+    //                     this.Ennemi.setVelocityX(50);
+    //                 }
+    //                 if(this.Ennemi.x > this.player.x){
+    //                     this.Ennemi.setVelocityX(-50);
+    //                 }
+    //                 if(this.Ennemi.y < this.player.y){
+    //                     this.Ennemi.setVelocityY(50);
+    //                 }
+    //                 if(this.Ennemi.y > this.player.y){
+    //                     this.Ennemi.setVelocityY(-50);
+    //                 }
+
+    }}
+
+
+    // The player and its settings
+        
+
+    //     //  The platforms group contains the ground and the 2 ledges we can jump on
+    //     this.platforms = this.physics.add.staticGroup();
+
+    //     //  Player physics properties. Give the little guy a slight bounce.
+    //     this.monster.setBounce(0.2);
+    //     this.monster.setCollideWorldBounds(true);
+// --------------------------------------------------------
+
+// };
+
+// TUER(player, enemy);
+//     {
+//         enemy.destroy(); 
+//     }
+
+var config = {
+    type: Phaser.CANVAS,
+    width: 1024,
+    height: 1024,
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: false,
+            debug: true
+        }
+    },
+    scene: [scene0,scene1]
+};
+
+
+new Phaser.Game(config);
+
+function hitEnnemi (player, Ennemi){
+    player.setTint(0xff0000);
+    player.anims.play('turn'); 
+    const myTimeout = setTimeout(1000);
+    player.gameOver = true;}
+
+</script>
+
+</body>
+</html>
